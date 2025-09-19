@@ -1,0 +1,324 @@
+openapi: 3.0.1
+info:
+  title: TODO list
+  description: TODO list api
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local Api server
+tags:
+  - name: Tasks
+    description: Операции с задачами
+paths:
+  /tasks:
+    get:
+      tags:
+        - Tasks
+      operationId: TasksIndex
+      summary: Получить список задач
+      description: Постранично возвращает список задач, отсортированных по ID
+      parameters:
+        - name: page
+          in: query
+          description: Номер страницы
+          required: false
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TasksCollection'
+    post:
+      tags:
+        - Tasks
+      operationId: TasksStore
+      summary: Добавить новую задачу
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  description: Уникальный заголовок задачи
+                  maxLength: 150
+                  example: "Новая задача"
+                description:
+                  type: string
+                  description: Описание задачи
+                  nullable: true
+                  example: "Описание новой задачи"
+                status:
+                  type: string
+                  description: Статус задачи
+                  enum: [ new, closed, work, suspended ]
+                  example: "new"
+            examples:
+              basicExample:
+                summary: Пример создания задачи
+                value:
+                  title: "Моя новая задача"
+                  description: "Подробное описание задачи"
+                  status: "new"
+      responses:
+        '201':
+          description: Задача успешно создана
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '422':
+          $ref: '#/components/responses/ValidationException'
+  /tasks/{id}:
+    get:
+      tags:
+        - Tasks
+      operationId: TasksShow
+      summary: Получить задачу по ID
+      description: Возвращает информацию о конкретной задаче
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID задачи
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '404':
+          $ref: '#/components/responses/NotFoundException'
+    put:
+      tags:
+        - Tasks
+      summary: Обновить задачу
+      operationId: TasksUpdate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID задачи
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - status
+              properties:
+                title:
+                  type: string
+                  description: Уникальный заголовок задачи
+                  maxLength: 150
+                  example: "Обновленное название"
+                description:
+                  type: string
+                  description: Описание задачи
+                  nullable: true
+                  example: "Обновленное описание"
+                status:
+                  type: string
+                  description: Статус задачи
+                  enum: [ new, closed, work, suspended ]
+                  example: "completed"
+      responses:
+        '200':
+          description: Задача успешно обновлена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '404':
+          $ref: '#/components/responses/NotFoundException'
+        '422':
+          $ref: '#/components/responses/ValidationException'
+    delete:
+      tags:
+        - Tasks
+      summary: Удалить задачу
+      description: Удаляет задачу по ID
+      operationId: TasksDelete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID задачи
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '204':
+          description: Задача успешно удалена
+        '404':
+          $ref: '#/components/responses/NotFoundException'
+components:
+  responses:
+    ValidationException:
+      description: Ошибка валидации
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Ошибка валидации"
+              errors:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                example:
+                  title:
+                    - "Неверный заголовок"
+                  status:
+                    - "Неверный статус"
+    NotFoundException:
+      description: Задача не найдена
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Не найдено"
+              errors:
+                type: object
+                properties:
+                  resource:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  resource: ["Не найдено"]
+    Success:
+      description: Successful
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+  schemas:
+    Task:
+      type: object
+      properties:
+        type:
+          type: string
+          example: tasks
+        id:
+          type: integer
+          example: 1
+        attributes:
+          type: object
+          properties:
+            title:
+              type: string
+              example: "Название задачи"
+            description:
+              type: string
+              nullable: true
+              example: "Описание задачи"
+            status:
+              type: string
+              example: "new"
+            created_at:
+              type: string
+              format: date-time
+              example: "2024-01-15 10:30:00"
+    TasksCollection:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    PaginationLinks:
+      type: object
+      properties:
+        first:
+          type: string
+          example: "http://localhost:8000/api/v1/tasks?page=1"
+        last:
+          type: string
+          example: "http://localhost:8000/api/v1/tasks?page=5"
+        prev:
+          type: string
+          nullable: true
+          example: null
+        next:
+          type: string
+          nullable: true
+          example: "http://localhost:8000/api/v1/tasks?page=2"
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        from:
+          type: integer
+          example: 1
+        last_page:
+          type: integer
+          example: 5
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                nullable: true
+              label:
+                type: string
+              page:
+                type: integer
+                nullable: true
+              active:
+                type: boolean
+        path:
+          type: string
+          example: "http://localhost:8080/api/v1/tasks"
+        per_page:
+          type: integer
+        to:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+          nullable: true
